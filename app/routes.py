@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from sqlalchemy.exc import IntegrityError
 from .repository import UserRepository
 
 user_bp = Blueprint('user_bp', __name__)
@@ -37,16 +38,31 @@ def get_user(id):
 def create_user():
     data = request.get_json()
     
-    if not data or 'name' not in data or 'email' not in data:
-        return jsonify({"error": "Missing 'name' or 'email'"}), 400
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    errors = []
+    if 'name' not in data: errors.append("name")
+    if 'email' not in data: errors.append("email")
+    
+    if errors:
+        return jsonify({"error": f"Missing fields: {', '.join(errors)}"}), 400
         
     try:
         user = repo.create(data['name'], data['email'])
         return jsonify({
-            "message": "User created successfully!"
+            "message": "User created successfully!",
+            "user": user.to_dict()
         }), 201
+
+    except IntegrityError:
+        return jsonify({
+            "error": "Conflict",
+            "message": "A user with this email already exists."
+        }), 409 
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
 @user_bp.route('/users/<int:id>', methods=['PUT'])
 def update_user(id):

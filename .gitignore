@@ -1,0 +1,16 @@
+# Python/Flask specifics
+__pycache__/
+*.py[cod]
+venv/
+.env
+instance/
+.webassets-cache
+
+# Distribution / build
+*.egg-info/
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/

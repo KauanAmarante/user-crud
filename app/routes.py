@@ -25,15 +25,15 @@ def list_users():
 def get_user(id):
     user = repo.get_by_id(id)
     
-    if user:
-        return jsonify({
-            "message": f"User with ID {id} found successfully.",
-            "user": user.to_dict()
-        }), 200
-    else:
+    if not user:
         return jsonify({
             "message": f"User with ID {id} does not exist in our records.",
         }), 404
+
+    return jsonify({
+        "message": f"User with ID {id} found successfully.",
+        "user": user.to_dict()
+    }), 200
 
 @user_bp.route('/users', methods=['POST'])
 def create_user():
@@ -122,12 +122,13 @@ def update_user(id):
 def delete_user(id):
     success = repo.delete(id)
 
-    if success:
-        return jsonify({
-            "message": f"User with ID {id} has been successfully deleted."
-        }), 200
-    else:
+    if not success:
         return jsonify({
             "error": "User not found",
             "message": f"Could not delete user {id} because they do not exist."
         }), 404
+        
+    return jsonify({
+        "message": f"User with ID {id} has been successfully deleted."
+    }), 200
+        

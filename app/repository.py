@@ -15,11 +15,15 @@ class UserRepository:
 
     def update(self, user_id, name, email):
         user = self.get_by_id(user_id)
-        if user:
-            if name is not None:
-                user.name = name
-            if email is not None:
-                user.email = email
+
+        if user is None:
+            return None
+            
+        if name is not None:
+            user.name = name
+        
+        if email is not None:
+            user.email = email
             
         db.session.commit()
         db.session.refresh(user)

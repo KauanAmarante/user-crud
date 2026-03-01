@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import IntegrityError
+from email_validator import validate_email, EmailNotValidError
 from .repository import UserRepository
 
 user_bp = Blueprint('user_bp', __name__)
@@ -46,8 +47,22 @@ def create_user():
     if 'email' not in data: errors.append("email")
     
     if errors:
-        return jsonify({"error": f"Missing fields: {', '.join(errors)}"}), 400
-        
+        return jsonify({
+            "error": f"Missing fields: {', '.join(errors)}"
+            }), 400
+    
+    email = data.get('email')
+
+    try:
+        email_info = validate_email(email, check_deliverability=False)
+        email = email_info.normalized
+
+    except EmailNotValidError as e:
+        return jsonify({
+            "error": "Invalid e-mail format",
+            "message": str(e)
+        }), 400
+
     try:
         user = repo.create(data['name'], data['email'])
         return jsonify({
@@ -68,20 +83,40 @@ def create_user():
 def update_user(id):
     data = request.get_json()
     
-    if not data or ('name' not in data and 'email' not in data):
+    if not data:
         return jsonify({"error": "No data provided for update"}), 400
-        
-    updated_user = repo.update(id, data.get('name'), data.get('email'))
     
-    if updated_user:
+    if 'email' in data: 
+        email = data.get('email')
+
+        try:
+            email_info = validate_email(email, check_deliverability=False)
+            email = email_info.normalized
+
+        except EmailNotValidError as e:
+            return jsonify({
+                "error": "Invalid e-mail format",
+                "message": str(e)
+            }), 400
+    
+    try:
+        updated_user = repo.update(id, data.get('name'), data.get('email'))
+        
+        if not updated_user:
+            return jsonify({
+                "error": "User not found",
+                "message": f"Could not update user {id} because they do not exist."
+            }), 404 
+        
         return jsonify({
             "message": f"User {id} updated successfully!"
-        }), 200
-    else:
+        }), 200 
+    
+    except IntegrityError:
         return jsonify({
-            "error": "User not found",
-            "message": f"Could not update user {id} because they do not exist."
-        }), 404 
+            "error": "Conflict",
+            "message": "A user with this email already exists."
+        }), 409 
 
 @user_bp.route('/users/<int:id>', methods=['DELETE'])
 def delete_user(id):
